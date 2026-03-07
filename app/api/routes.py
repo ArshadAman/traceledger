@@ -25,7 +25,7 @@ def login(payload: LoginRequest):
     success = login_user(conn, payload.email, payload.password)
     if not success:
         raise HTTPException(status_code=401, detail="Invalid Credentials")
-    return {"access_token": "login endpoint"}
+    return {"message": "Login Successful"}
 
 
 # ----------USERS------------
