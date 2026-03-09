@@ -1,19 +1,12 @@
-import bcrypt
 from app.db.pool import pool
+from app.security.password_verfication import verify_password
 from db.audit import INSERT_AUDIT_EVENT
-from db.auth import GET_USER_BY_EMAIL
+from db.users import CREATE_USER, GET_USER_BY_EMAIL
 from psycopg2.extras import RealDictCursor
-
-
-def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(
-        password.encode(),
-        hashed.encode()
-    )
-
+from security.hashing import hash_password
+from db.connection import get_db_conn
 
 def login_user(conn, email: str, password: str) -> bool:
-    conn = pool.getconn()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(GET_USER_BY_EMAIL, (email,))
@@ -61,5 +54,45 @@ def login_user(conn, email: str, password: str) -> bool:
             )
             conn.commit()
             return True
+    finally:
+        pool.putconn(conn)
+
+def register_user(conn, email: str, password: str):
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            password_hash = hash_password(password)
+            cur.execute(GET_USER_BY_EMAIL, (email,))
+            existing_user = cur.fetchone()
+            if existing_user:
+                cur.execute(
+                    INSERT_AUDIT_EVENT,
+                    (
+                        None,
+                        "user",
+                        "USER_REGISTER",
+                        "user",
+                        "failure",
+                        {"reason": "User already exits"}
+                    )
+                )
+                return None, False
+            cur.execute(
+               CREATE_USER, 
+              (email, password_hash, "user") 
+            )
+            user = cur.fetchone()
+            cur.execute(
+                INSERT_AUDIT_EVENT,
+                (
+                    user["id"],
+                    "user",
+                    "USER_REGISTER",
+                    "user",
+                    "success",
+                    {"method": "password"}
+                )
+            )
+            conn.commit()
+            return user["id"]
     finally:
         pool.putconn(conn)

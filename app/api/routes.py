@@ -1,11 +1,11 @@
 from typing import Optional
 
-from db.connecction import get_db_conn
+from db.connection import get_db_conn
 from fastapi import APIRouter
 from schemas.audit_events import AuditEventListResponse
 from schemas.auth import LoginRequest, LoginResponse
 from schemas.users import CreateUserRequest, UserResponse
-from services.auth_service import login_user
+from services.auth_service import login_user, register_user
 from starlette.exceptions import HTTPException
 
 # Initialize a router
@@ -26,12 +26,16 @@ def login(payload: LoginRequest):
     if not success:
         raise HTTPException(status_code=401, detail="Invalid Credentials")
     return {"message": "Login Successful"}
-
+    
 
 # ----------USERS------------
 @router.post("/users", tags=["users"], response_model=UserResponse, status_code=201)
 def create_user(payload: CreateUserRequest):
-    return {"id": 1, "email": payload.email}
+    conn = get_db_conn()
+    user_id, success = register_user(conn, payload.email, payload.password)
+    if not success:
+        raise HTTPException(status_code=400, detail="Some error occured")
+    return {"id": user_id, "email": payload.email}
 
 
 @router.get("/users/me", tags=["users"])
