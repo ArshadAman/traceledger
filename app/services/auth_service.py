@@ -1,63 +1,51 @@
-from app.db.pool import pool
-from app.security.password_verfication import verify_password
+import json
+from messaging.publisher import publish_event
+from cache.redis_client import redis_client
+from db.pool import pool
+from security.password_verfication import verify_password
 from db.audit import INSERT_AUDIT_EVENT
-from db.users import CREATE_USER, GET_USER_BY_EMAIL
+from db.users import CREATE_USER, GET_USER_BY_EMAIL, GET_USER_BY_ID
 from psycopg2.extras import RealDictCursor
 from security.hashing import hash_password
 from db.connection import get_db_conn
 
-def login_user(conn, email: str, password: str) -> bool:
+def login_user(email: str, password: str) -> bool:
+    conn = get_db_conn()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(GET_USER_BY_EMAIL, (email,))
             user = cur.fetchone()
     
             if not user:
-                cur.execute(
-                    INSERT_AUDIT_EVENT,
-                    (
-                        None,
-                        "system",
-                        "USER_LOGIN",
-                        "user",
-                        "failure",
-                        {"reason": "user not found"},
-                    ),
+                publish_event(
+                    "USER_LOGIN_FAILED",
+                    {
+                        "user_id": email,
+                        "reason": "user not found",
+                        "status": "failed"
+                    }
                 )
-                conn.commit()
                 return False
     
             # Password
             if not verify_password(password, user["password_hash"]):
-                cur.execute(
-                    INSERT_AUDIT_EVENT,
-                    (
-                        user["id"],
-                        "user",
-                        "USER_LOGIN",
-                        "failure",
-                        {"reason": "Invalid credentials"},
-                    ),
-                )
-                conn.commit()
+                publish_event("USER_LOGIN_FAILED", {"user_id": str(user["id"]), "reason": "invalid password", "status": "failed"})
                 return False
             # Success
-            cur.execute(
-                INSERT_AUDIT_EVENT,
-                (
-                    user["id"],
-                    "user",
-                    "USER_LOGIN",
-                    "success",
-                    {"method": "password"}
-                )
+            publish_event(
+                "USER_LOGIN_SUCCESS",
+                {
+                    "user_id": str(user["id"]),
+                    "method": "password",
+                    "status": "success"
+                }
             )
-            conn.commit()
             return True
     finally:
         pool.putconn(conn)
 
-def register_user(conn, email: str, password: str):
+def register_user(email: str, password: str):
+    conn = get_db_conn()
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             password_hash = hash_password(password)
@@ -81,18 +69,50 @@ def register_user(conn, email: str, password: str):
               (email, password_hash, "user") 
             )
             user = cur.fetchone()
-            cur.execute(
-                INSERT_AUDIT_EVENT,
-                (
-                    user["id"],
-                    "user",
-                    "USER_REGISTER",
-                    "user",
-                    "success",
-                    {"method": "password"}
+            if user:
+                cur.execute(
+                    INSERT_AUDIT_EVENT,
+                    (
+                        user["id"],
+                        "user",
+                        "USER_REGISTER",
+                        "user",
+                        "success",
+                        {"method": "password"}
+                    )
                 )
-            )
-            conn.commit()
-            return user["id"]
+                conn.commit()
+                return user["id"], True
+            else:
+                return None, False
     finally:
         pool.putconn(conn)
+
+# GET user service
+def get_user(user_id):
+    """Fetch a user using cache-aside strategy"""
+    
+    # create a cache key
+    cache_key = f"user:{user_id}"
+    
+    # Check the cache
+    cached_user = redis_client.get(cache_key)
+    if cached_user:
+        # if data exits in Redis, convert JSON String to python dict
+        return json.loads(str(cached_user))
+    
+    # if there is cache miss
+    conn = get_db_conn()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as curr:
+            curr.execute(GET_USER_BY_ID, (user_id,))
+            user = curr.fetchone()
+    finally:
+        pool.putconn(conn)
+    # store it in the cache
+    redis_client.set(
+        cache_key,
+        json.dumps(user),
+        ex=60
+    )
+    return user

@@ -21,8 +21,7 @@ def health_check():
 # ---------Auth------------
 @router.post("/auth/login", tags=["auth"], response_model=LoginResponse)
 def login(payload: LoginRequest):
-    conn = get_db_conn()
-    success = login_user(conn, payload.email, payload.password)
+    success = login_user(payload.email, payload.password)
     if not success:
         raise HTTPException(status_code=401, detail="Invalid Credentials")
     return {"message": "Login Successful"}
@@ -31,8 +30,7 @@ def login(payload: LoginRequest):
 # ----------USERS------------
 @router.post("/users", tags=["users"], response_model=UserResponse, status_code=201)
 def create_user(payload: CreateUserRequest):
-    conn = get_db_conn()
-    user_id, success = register_user(conn, payload.email, payload.password)
+    user_id, success = register_user(payload.email, payload.password)
     if not success:
         raise HTTPException(status_code=400, detail="Some error occured")
     return {"id": user_id, "email": payload.email}
@@ -44,12 +42,16 @@ def get_my_profile():
 
 
 @router.get("/users/{user_id}", tags=["users"])
-def get_user(user_id: int):
-    return {"message": "Get user endpoint"}
+def get_user(user_id: str):
+    user = get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 @router.patch("/users/{user_id}", tags=["users"])
 def update_user(user_id: int):
+    # redis_client.delete(f"user:{user_id}") need to done in the service layer
     return {"message": "Update user endpoint"}
 
 
