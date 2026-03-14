@@ -60,10 +60,18 @@ def register_user(email: str, password: str):
                         "USER_REGISTER",
                         "user",
                         "failure",
-                        {"reason": "User already exits"}
+                        json.dumps({"reason": "User already exits"})
                     )
                 )
-                return None, False
+                publish_event(
+                    "USER_REGISTER_FAILED",
+                    {
+                        "user_id": None,
+                        "reason": "user already exists",
+                        "status": "failure"
+                    }
+                )
+                return None, 409
             cur.execute(
                CREATE_USER, 
               (email, password_hash, "user") 
@@ -78,13 +86,21 @@ def register_user(email: str, password: str):
                         "USER_REGISTER",
                         "user",
                         "success",
-                        {"method": "password"}
+                        json.dumps({"method": "password"})
                     )
                 )
                 conn.commit()
-                return user["id"], True
+                publish_event(
+                    "USER_REGISTER_SUCCESS",
+                    {
+                        "user_id": str(user["id"]),
+                        "method": "password",
+                        "status": "success"
+                    }
+                )
+                return user["id"], 201
             else:
-                return None, False
+                return None, 400
     finally:
         pool.putconn(conn)
 

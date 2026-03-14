@@ -1,13 +1,12 @@
 from typing import Optional
-
-from db.connection import get_db_conn
+from services import audit_service
 from fastapi import APIRouter
 from schemas.audit_events import AuditEventListResponse
 from schemas.auth import LoginRequest, LoginResponse
 from schemas.users import CreateUserRequest, UserResponse
 from services.auth_service import login_user, register_user
 from starlette.exceptions import HTTPException
-
+from schemas.search import AuditSearchResponse
 # Initialize a router
 router = APIRouter()
 
@@ -30,9 +29,9 @@ def login(payload: LoginRequest):
 # ----------USERS------------
 @router.post("/users", tags=["users"], response_model=UserResponse, status_code=201)
 def create_user(payload: CreateUserRequest):
-    user_id, success = register_user(payload.email, payload.password)
-    if not success:
-        raise HTTPException(status_code=400, detail="Some error occured")
+    user_id, code = register_user(payload.email, payload.password)
+    if code != 201:
+        raise HTTPException(status_code=code, detail="Some error occured")
     return {"id": user_id, "email": payload.email}
 
 
@@ -78,6 +77,11 @@ def list_audit_events(
         ],
     }
 
+@router.get("/audit-events/search", response_model=AuditSearchResponse)
+def search_audit_logs(q:str, start:Optional[str]=None, end: Optional[str]=None, limit: int = 10,
+offset: int = 0):
+    res = audit_service.es_search(q, start, end, limit, offset)
+    return res
 
 @router.get("/audit-events/{event_id}", tags=["audit-events"])
 def get_audit_event(event_id: int):
@@ -104,7 +108,6 @@ def get_user_audit_events(
             }
         ],
     }
-
 
 # --------------INTERNAL---------------
 @router.post("/internal/audit-events", tags=["internal"])

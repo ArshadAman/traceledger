@@ -10,7 +10,8 @@ def publish_event(event_type, payload):
     # Declare exchange
     channel.exchange_declare(
         exchange="audit_events",
-        exchange_type="fanout"
+        exchange_type="fanout",
+        durable=True
     )
     
     # Prepare message

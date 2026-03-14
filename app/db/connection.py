@@ -1,13 +1,6 @@
-import psycopg2
-
+from db import pool
 
 def get_db_conn():
-    return psycopg2.connect(
-        dbname="traceledger",
-        user="arshadaman",
-        password="",
-        host="localhost",
-        port=5432
-    )
+    return pool.pool.getconn()
     
 # print(get_db_conn())

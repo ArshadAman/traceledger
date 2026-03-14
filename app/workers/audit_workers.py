@@ -1,5 +1,6 @@
 import json
-
+from search.client import index_audit_event
+from datetime import datetime
 from db.audit import INSERT_AUDIT_EVENT
 from db.connection import get_db_conn
 from db.pool import pool
@@ -9,7 +10,7 @@ from psycopg2.extras import RealDictCursor
 
 # Event Processing
 def process_event(event):
-    """Business logic for proccessing audit event"""
+    """Business logic for processing audit event"""
     event_type = event["event_type"]
     data = event["data"]
 
@@ -30,6 +31,17 @@ def process_event(event):
             )
 
             conn.commit()
+        
+        doc = {
+            "actor_id": data.get("user_id"),
+            "action": event_type,
+            "status": data.get("status", "unknown"),
+            "metadata": data,
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": data.get("reason", ""),
+        }
+        
+        index_audit_event(doc)
 
     finally:
         pool.putconn(conn)
@@ -38,6 +50,7 @@ def process_event(event):
 # Worker callback
 def handle_event(ch, method, properties, body):
     """Rabbit MQ handler"""
+    print("handler started.....")
     try:
         event = json.loads(body)
 
@@ -84,7 +97,7 @@ def main():
 
     # Main exchange
     channel.exchange_declare(
-        exchange="audit_exchange", exchange_type="fanout", durable=True
+        exchange="audit_events", exchange_type="fanout", durable=True
     )
 
     # Retry exchange
