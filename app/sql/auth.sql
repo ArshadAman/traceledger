@@ -1,1 +1,0 @@
-SELECT id, password_hash, role FROM users where email = $1
