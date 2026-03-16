@@ -1,14 +1,21 @@
 from typing import Optional
-from services import audit_service
+
+from core.errors import raise_api_error
 from fastapi import APIRouter
 from schemas.audit_events import AuditEventListResponse
 from schemas.auth import LoginRequest, LoginResponse
+from schemas.search import AuditSearchResponse
 from schemas.users import CreateUserRequest, UserResponse
+from services import audit_service
 from services.auth_service import login_user, register_user
 from starlette.exceptions import HTTPException
-from schemas.search import AuditSearchResponse
+from starlette.requests import Request
+
+from app.core.rate_limiter import RateLimiter
+
 # Initialize a router
 router = APIRouter()
+rate_limiter = RateLimiter(limit=100, window=60)
 
 
 # ------------System----------------
@@ -24,14 +31,14 @@ def login(payload: LoginRequest):
     if not success:
         raise HTTPException(status_code=401, detail="Invalid Credentials")
     return {"message": "Login Successful"}
-    
+
 
 # ----------USERS------------
 @router.post("/users", tags=["users"], response_model=UserResponse, status_code=201)
 def create_user(payload: CreateUserRequest):
-    user_id, code = register_user(payload.email, payload.password)
-    if code != 201:
-        raise HTTPException(status_code=code, detail="Some error occured")
+    user_id, status = register_user(payload.email, payload.password)
+    if status != 201:
+        raise_api_error(400, "User creation failed")
     return {"id": user_id, "email": payload.email}
 
 
@@ -77,11 +84,22 @@ def list_audit_events(
         ],
     }
 
+
 @router.get("/audit-events/search", response_model=AuditSearchResponse)
-def search_audit_logs(q:str, start:Optional[str]=None, end: Optional[str]=None, limit: int = 10,
-offset: int = 0):
+def search_audit_logs(
+    request: Request,
+    q: str,
+    start: Optional[str] = None,
+    end: Optional[str] = None,
+    limit: int = 10,
+    offset: int = 0,
+):
+    user_key = request.client.host if request.client else "anonymous"
+    if rate_limiter.allow_request(user_key):
+        raise HTTPException(status_code=429, detail="Rate Limit Exceeded")
     res = audit_service.es_search(q, start, end, limit, offset)
     return res
+
 
 @router.get("/audit-events/{event_id}", tags=["audit-events"])
 def get_audit_event(event_id: int):
@@ -108,6 +126,7 @@ def get_user_audit_events(
             }
         ],
     }
+
 
 # --------------INTERNAL---------------
 @router.post("/internal/audit-events", tags=["internal"])

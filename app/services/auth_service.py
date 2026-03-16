@@ -101,6 +101,10 @@ def register_user(email: str, password: str):
                 return user["id"], 201
             else:
                 return None, 400
+    except Exception as e:
+        # log the error
+        conn.rollback()
+        return None, 400
     finally:
         pool.putconn(conn)
 
@@ -119,12 +123,17 @@ def get_user(user_id):
     
     # if there is cache miss
     conn = get_db_conn()
+    user = None
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as curr:
             curr.execute(GET_USER_BY_ID, (user_id,))
             user = curr.fetchone()
+    except Exception as e:
+        # log the error
+        conn.rollback()
     finally:
         pool.putconn(conn)
+        
     # store it in the cache
     redis_client.set(
         cache_key,
