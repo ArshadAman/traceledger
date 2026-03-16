@@ -98,8 +98,10 @@ def search_audit_logs(
     if rate_limiter.allow_request(user_key):
         raise HTTPException(status_code=429, detail="Rate Limit Exceeded")
     res = audit_service.es_search(q, start, end, limit, offset)
+    if res.get("degraded"):
+        # Logging
+        print("Service Degraded")
     return res
-
 
 @router.get("/audit-events/{event_id}", tags=["audit-events"])
 def get_audit_event(event_id: int):

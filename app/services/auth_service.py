@@ -116,11 +116,14 @@ def get_user(user_id):
     cache_key = f"user:{user_id}"
     
     # Check the cache
-    cached_user = redis_client.get(cache_key)
-    if cached_user:
-        # if data exits in Redis, convert JSON String to python dict
-        return json.loads(str(cached_user))
-    
+    try:
+        cached_user = redis_client.get(cache_key)
+        if cached_user:
+            # if data exits in Redis, convert JSON String to python dict
+            return json.loads(str(cached_user))
+    except Exception as e:
+        print("Redis Degraded: ", e)
+        
     # if there is cache miss
     conn = get_db_conn()
     user = None
@@ -135,9 +138,12 @@ def get_user(user_id):
         pool.putconn(conn)
         
     # store it in the cache
-    redis_client.set(
-        cache_key,
-        json.dumps(user),
-        ex=60
-    )
+    try:
+        redis_client.set(
+            cache_key,
+            json.dumps(user),
+            ex=60
+        )
+    except Exception as e:
+        print("Redis write degreaded: ")
     return user
