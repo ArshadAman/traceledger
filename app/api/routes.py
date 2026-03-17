@@ -11,7 +11,7 @@ from services.auth_service import login_user, register_user
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 
-from app.core.rate_limiter import RateLimiter
+from core.rate_limiter import RateLimiter
 
 # Initialize a router
 router = APIRouter()

@@ -1,8 +1,9 @@
 import pika
+from core.config import settings
 
 def get_rabbit_con():
     params = pika.ConnectionParameters(
-        host="localhost"
+        host=settings.rabbitmq_host
     )
     
     connection = pika.BlockingConnection(params)

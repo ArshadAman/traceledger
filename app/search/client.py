@@ -1,6 +1,8 @@
 from elasticsearch import Elasticsearch
 
-es = Elasticsearch("http://localhost:9200")
+from core.config import settings
+
+es = Elasticsearch(settings.elastic_search_host)
 
 INDEX_NAME = "audit_events"
 
