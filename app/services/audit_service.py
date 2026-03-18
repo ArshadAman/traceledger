@@ -1,5 +1,6 @@
 from search.client import es
 from search.service import search_cb
+from core.logger import logger
 
 def es_search(q: str, start=None, end=None, limit: int = 10, offset: int = 0) -> dict:
     try:
@@ -48,7 +49,7 @@ def es_search(q: str, start=None, end=None, limit: int = 10, offset: int = 0) ->
         }
     except Exception as e:
         # Gracceful Degradation
-        print("Searcch degraded, elastic search unavailable: ", e)
+        logger.warning("Searcch degraded, elastic search unavailable: ", e)
         return {
             "total": 0,
             "items": [],

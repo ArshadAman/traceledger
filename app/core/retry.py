@@ -1,4 +1,5 @@
 import time
+from core.logger import logger
 
 def retry(opration, retries = 3, delay = 1):
     """
@@ -10,7 +11,7 @@ def retry(opration, retries = 3, delay = 1):
             # attempt operation
             return opration()
         except Exception as e:
-            print(f"Attempt {attempt+1} failed: ", e)
+            logger.warning(f"Attempt {attempt+1} failed: ", e)
             time.sleep(delay)
     
     raise Exception("Operation failed after retries")

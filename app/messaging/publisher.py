@@ -1,6 +1,7 @@
 import json
 from messaging.rabbitmq import get_rabbit_con
 import pika
+from core.logger import logger
 
 def publish_event(event_type, payload):
     try:
@@ -29,4 +30,4 @@ def publish_event(event_type, payload):
         )
         connection.close()
     except Exception as e:
-        print("Rabbit MQ degraded: ", e)
+        logger.error("Rabbit MQ degraded: ", e)

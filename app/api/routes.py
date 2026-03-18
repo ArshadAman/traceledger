@@ -10,7 +10,7 @@ from services import audit_service
 from services.auth_service import login_user, register_user
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-
+from core.logger import logger
 from core.rate_limiter import RateLimiter
 
 # Initialize a router
@@ -100,7 +100,7 @@ def search_audit_logs(
     res = audit_service.es_search(q, start, end, limit, offset)
     if res.get("degraded"):
         # Logging
-        print("Service Degraded")
+        logger.warning("Service Degraded")
     return res
 
 @router.get("/audit-events/{event_id}", tags=["audit-events"])

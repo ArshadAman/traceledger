@@ -1,3 +1,4 @@
+from core.logger import logger
 import json
 from messaging.publisher import publish_event
 from cache.redis_client import redis_client
@@ -122,7 +123,7 @@ def get_user(user_id):
             # if data exits in Redis, convert JSON String to python dict
             return json.loads(str(cached_user))
     except Exception as e:
-        print("Redis Degraded: ", e)
+        logger.warning("Redis Degraded: ", e)
         
     # if there is cache miss
     conn = get_db_conn()
@@ -145,5 +146,5 @@ def get_user(user_id):
             ex=60
         )
     except Exception as e:
-        print("Redis write degreaded: ")
+        logger.error("Redis write degreaded: ", e)
     return user

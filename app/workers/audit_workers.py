@@ -1,3 +1,4 @@
+from core.logger import logger
 import json
 from search.client import index_audit_event
 from datetime import datetime
@@ -50,7 +51,7 @@ def process_event(event):
 # Worker callback
 def handle_event(ch, method, properties, body):
     """Rabbit MQ handler"""
-    print("handler started.....")
+    logger.info("handler started.....")
     try:
         event = json.loads(body)
 
@@ -59,7 +60,7 @@ def handle_event(ch, method, properties, body):
         # Success -> ack message
         ch.basic_ack(delivery_tag=method.delivery_tag)
     except Exception as e:
-        print("Worker Failed: ", e)
+        logger.error("Worker Failed: ", e)
         # retry count tracking
         retry_count = 0
         if properties.headers and "x-retry-count" in properties.headers:
@@ -69,7 +70,7 @@ def handle_event(ch, method, properties, body):
         MAX_RETRY = 3
 
         if retry_count < MAX_RETRY:
-            print("Retrying message: ", retry_count + 1)
+            logger.warning("Retrying message: ", retry_count + 1)
 
             # Publish message to retry exchange
             ch.basic_publish(
@@ -85,7 +86,7 @@ def handle_event(ch, method, properties, body):
             # ack original message
             ch.basic_ack(delivery_tag=method.delivery_tag)
         else:
-            print("Sending to DLQ....")
+            logger.info("Sending to DLQ....")
             # reject message -> goes to DLQ
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
 
@@ -144,7 +145,7 @@ def main():
         queue="audit_events_queue", on_message_callback=handle_event, auto_ack=False
     )
 
-    print("Audit worker running...")
+    logger.info("Audit worker running...")
 
     channel.start_consuming()
 
