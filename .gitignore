@@ -1,3 +1,4 @@
 /env
 /experiments
 .env
+__pycache__
