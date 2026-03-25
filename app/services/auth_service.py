@@ -1,14 +1,18 @@
-from core.logger import logger
 import json
-from messaging.publisher import publish_event
+
 from cache.redis_client import redis_client
-from db.pool import pool
-from security.password_verfication import verify_password
+from core.logger import logger
 from db.audit import INSERT_AUDIT_EVENT
+from db.connection import get_db_conn
+from db.pool import pool
 from db.users import CREATE_USER, GET_USER_BY_EMAIL, GET_USER_BY_ID
+from messaging.publisher import publish_event
 from psycopg2.extras import RealDictCursor
 from security.hashing import hash_password
-from db.connection import get_db_conn
+from security.password_verfication import verify_password
+
+from app.core.metrics import login_failure_counter, login_success_counter
+
 
 def login_user(email: str, password: str) -> bool:
     conn = get_db_conn()
@@ -16,34 +20,37 @@ def login_user(email: str, password: str) -> bool:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute(GET_USER_BY_EMAIL, (email,))
             user = cur.fetchone()
-    
+
             if not user:
                 publish_event(
                     "USER_LOGIN_FAILED",
-                    {
-                        "user_id": email,
-                        "reason": "user not found",
-                        "status": "failed"
-                    }
+                    {"user_id": email, "reason": "user not found", "status": "failed"},
                 )
+                login_failure_counter.inc()
                 return False
-    
+
             # Password
             if not verify_password(password, user["password_hash"]):
-                publish_event("USER_LOGIN_FAILED", {"user_id": str(user["id"]), "reason": "invalid password", "status": "failed"})
+                publish_event(
+                    "USER_LOGIN_FAILED",
+                    {
+                        "user_id": str(user["id"]),
+                        "reason": "invalid password",
+                        "status": "failed",
+                    },
+                )
+                login_failure_counter.inc()
                 return False
             # Success
             publish_event(
                 "USER_LOGIN_SUCCESS",
-                {
-                    "user_id": str(user["id"]),
-                    "method": "password",
-                    "status": "success"
-                }
+                {"user_id": str(user["id"]), "method": "password", "status": "success"},
             )
+            login_success_counter.inc()
             return True
     finally:
         pool.putconn(conn)
+
 
 def register_user(email: str, password: str):
     conn = get_db_conn()
@@ -61,22 +68,19 @@ def register_user(email: str, password: str):
                         "USER_REGISTER",
                         "user",
                         "failure",
-                        json.dumps({"reason": "User already exits"})
-                    )
+                        json.dumps({"reason": "User already exits"}),
+                    ),
                 )
                 publish_event(
                     "USER_REGISTER_FAILED",
                     {
                         "user_id": None,
                         "reason": "user already exists",
-                        "status": "failure"
-                    }
+                        "status": "failure",
+                    },
                 )
                 return None, 409
-            cur.execute(
-               CREATE_USER, 
-              (email, password_hash, "user") 
-            )
+            cur.execute(CREATE_USER, (email, password_hash, "user"))
             user = cur.fetchone()
             if user:
                 cur.execute(
@@ -87,8 +91,8 @@ def register_user(email: str, password: str):
                         "USER_REGISTER",
                         "user",
                         "success",
-                        json.dumps({"method": "password"})
-                    )
+                        json.dumps({"method": "password"}),
+                    ),
                 )
                 conn.commit()
                 publish_event(
@@ -96,8 +100,8 @@ def register_user(email: str, password: str):
                     {
                         "user_id": str(user["id"]),
                         "method": "password",
-                        "status": "success"
-                    }
+                        "status": "success",
+                    },
                 )
                 return user["id"], 201
             else:
@@ -109,13 +113,14 @@ def register_user(email: str, password: str):
     finally:
         pool.putconn(conn)
 
+
 # GET user service
 def get_user(user_id):
     """Fetch a user using cache-aside strategy"""
-    
+
     # create a cache key
     cache_key = f"user:{user_id}"
-    
+
     # Check the cache
     try:
         cached_user = redis_client.get(cache_key)
@@ -124,7 +129,7 @@ def get_user(user_id):
             return json.loads(str(cached_user))
     except Exception as e:
         logger.warning("Redis Degraded: ", e)
-        
+
     # if there is cache miss
     conn = get_db_conn()
     user = None
@@ -137,14 +142,10 @@ def get_user(user_id):
         conn.rollback()
     finally:
         pool.putconn(conn)
-        
+
     # store it in the cache
     try:
-        redis_client.set(
-            cache_key,
-            json.dumps(user),
-            ex=60
-        )
+        redis_client.set(cache_key, json.dumps(user), ex=60)
     except Exception as e:
         logger.error("Redis write degreaded: ", e)
     return user

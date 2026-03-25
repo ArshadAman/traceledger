@@ -1,3 +1,5 @@
+from prometheus_client import Counter
+
 # Simple in-memory metrics
 
 # Counter -> total_request
@@ -34,3 +36,14 @@ def get_metrics():
         "total_errors": ERROR_COUNT,
         "total_requests": LOGIN_COUNT,
     }
+    
+
+login_success_counter = Counter(
+    "login_success_total",
+    "Total successful logins"
+)
+
+login_failure_counter = Counter(
+    "login_failure_total",
+    "Total failed logins"
+)
