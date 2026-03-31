@@ -1,15 +1,15 @@
 import json
 
-from cache.redis_client import redis_client
-from core.logger import logger
-from db.audit import INSERT_AUDIT_EVENT
-from db.connection import get_db_conn
-from db.pool import pool
-from db.users import CREATE_USER, GET_USER_BY_EMAIL, GET_USER_BY_ID
-from messaging.publisher import publish_event
+from app.cache.redis_client import redis_client
+from app.core.logger import logger
+from app.db.audit import INSERT_AUDIT_EVENT
+from app.db.connection import get_db_conn
+from app.db.pool import pool
+from app.db.users import CREATE_USER, GET_USER_BY_EMAIL, GET_USER_BY_ID
+from app.messaging.publisher import publish_event
 from psycopg2.extras import RealDictCursor
-from security.hashing import hash_password
-from security.password_verfication import verify_password
+from app.security.hashing import hash_password
+from app.security.password_verfication import verify_password
 
 from app.core.metrics import login_failure_counter, login_success_counter
 

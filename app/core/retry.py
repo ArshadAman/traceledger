@@ -1,5 +1,5 @@
 import time
-from core.logger import logger
+from app.core.logger import logger
 
 def retry(opration, retries = 3, delay = 1):
     """

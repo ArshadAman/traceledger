@@ -1,5 +1,5 @@
 from psycopg2.pool import SimpleConnectionPool
-from core.config import settings
+from app.core.config import settings
 
 pool = SimpleConnectionPool(
     minconn=1,

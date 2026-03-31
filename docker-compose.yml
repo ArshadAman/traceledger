@@ -1,0 +1,37 @@
+services:
+    db:
+      image: postgres:17
+      
+      environment:
+         POSTGRESS_DB: traceledger
+         POSTGRESS_USER: user
+         POSTGRESS_PASSWORD: ""
+         
+      ports:
+         - "5432:5432"
+    redis:
+      image: redis:7
+      ports:
+        - "6379:6379"
+    
+    rabbitmq:
+      image: rabbitmq:3-management
+      ports:
+        - "5672:5672"
+        - "15672:15672"
+      
+    app:
+       build: .
+       ports:
+          - "8000:8000"
+       depends_on:
+          - db
+          - redis
+          - rabbitmq
+       environment:
+         DB_HOST: db
+         DB_USER: user
+         DB_PASSWORD: password
+         DB_NAME: traceledger
+         REDIS_HOST: redis
+         RMQ_HOST: rabbit_mq

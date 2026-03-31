@@ -1,22 +1,22 @@
 from typing import Optional
-from core.metrics import increment_error, increment_login, increment_request, get_metrics
-from core.errors import raise_api_error
+from app.core.metrics import increment_error, increment_login, increment_request, get_metrics
+from app.core.errors import raise_api_error
 from fastapi import APIRouter
-from schemas.audit_events import AuditEventListResponse
-from schemas.auth import LoginRequest, LoginResponse
-from schemas.search import AuditSearchResponse
-from schemas.users import CreateUserRequest, UserResponse
-from services import audit_service
-from services.auth_service import login_user, register_user
+from app.schemas.audit_events import AuditEventListResponse
+from app.schemas.auth import LoginRequest, LoginResponse
+from app.schemas.search import AuditSearchResponse
+from app.schemas.users import CreateUserRequest, UserResponse
+from app.services import audit_service
+from app.services.auth_service import login_user, register_user
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
-from core.logger import logger
+from app.core.logger import logger
 from core.rate_limiter import RateLimiter
-from db.connection import get_db_conn
-from db.pool import pool
-from cache.redis_client import redis_client
-from messaging.rabbitmq import get_rabbit_con
-from search.client import es
+from app.db.connection import get_db_conn
+from app.db.pool import pool
+from app.cache.redis_client import redis_client
+from app.messaging.rabbitmq import get_rabbit_con
+from app.search.client import es
 
 # Initialize a router
 router = APIRouter()

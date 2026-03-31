@@ -1,4 +1,4 @@
-from cache.redis_client import redis_client
+from app.cache.redis_client import redis_client
 
 class RateLimiter:
     

@@ -4,10 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     
     # ---------- DB ----------
-    db_host: str = "localhost"
+    db_host: str = "host.docker.internal"
     db_port: int = 5432
     db_name: str = "traceledger"
-    db_user: str = "arshad"
+    db_user: str = "postgres"
     db_password: str = ""
 
     # ---------- Redis ----------

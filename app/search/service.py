@@ -1,4 +1,4 @@
-from core.circuit_breaker import CircuitBreaker
+from app.core.circuit_breaker import CircuitBreaker
 
 search_cb = CircuitBreaker(
     failure_threshold=3,

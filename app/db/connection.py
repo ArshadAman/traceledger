@@ -1,4 +1,4 @@
-from db import pool
+from app.db import pool
 
 def get_db_conn():
     return pool.pool.getconn()

@@ -1,6 +1,6 @@
-from search.client import es
-from search.service import search_cb
-from core.logger import logger
+from app.search.client import es
+from app.search.service import search_cb
+from app.core.logger import logger
 
 def es_search(q: str, start=None, end=None, limit: int = 10, offset: int = 0) -> dict:
     try:

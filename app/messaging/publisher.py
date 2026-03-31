@@ -1,7 +1,7 @@
 import json
-from messaging.rabbitmq import get_rabbit_con
+from app.messaging.rabbitmq import get_rabbit_con
 import pika
-from core.logger import logger
+from app.core.logger import logger
 
 def publish_event(event_type, payload):
     try:

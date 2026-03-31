@@ -1,5 +1,5 @@
 import pika
-from core.config import settings
+from app.core.config import settings
 
 def get_rabbit_con():
     params = pika.ConnectionParameters(

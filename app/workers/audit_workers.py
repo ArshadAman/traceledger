@@ -1,11 +1,11 @@
-from core.logger import logger
+from app.core.logger import logger
 import json
 from search.client import index_audit_event
 from datetime import datetime
-from db.audit import INSERT_AUDIT_EVENT
-from db.connection import get_db_conn
-from db.pool import pool
-from messaging.rabbitmq import get_rabbit_con
+from app.db.audit import INSERT_AUDIT_EVENT
+from app.db.connection import get_db_conn
+from app.db.pool import pool
+from app.messaging.rabbitmq import get_rabbit_con
 from psycopg2.extras import RealDictCursor
 
 

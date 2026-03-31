@@ -2,7 +2,7 @@ import logging
 
 from elasticsearch import Elasticsearch
 
-from core.config import settings
+from app.core.config import settings
 
 # connect to ES
 es = Elasticsearch(settings.elastic_search_host)
