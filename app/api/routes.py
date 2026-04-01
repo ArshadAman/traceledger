@@ -70,7 +70,7 @@ def health_check():
             status["elasticsearch"] = "fail"
     except Exception:
         status["elasticsearch"] = "fail"
-
+    status["container_id"] = os.getenv("HOSTNAME")
     return status
 
 # ---------Auth------------
