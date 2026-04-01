@@ -1,37 +1,81 @@
 services:
-    db:
-      image: postgres:17
-      
-      environment:
-         POSTGRESS_DB: traceledger
-         POSTGRESS_USER: user
-         POSTGRESS_PASSWORD: ""
-         
-      ports:
-         - "5432:5432"
-    redis:
-      image: redis:7
-      ports:
-        - "6379:6379"
-    
-    rabbitmq:
-      image: rabbitmq:3-management
-      ports:
-        - "5672:5672"
-        - "15672:15672"
-      
-    app:
-       build: .
-       ports:
-          - "8000:8000"
-       depends_on:
-          - db
-          - redis
-          - rabbitmq
-       environment:
-         DB_HOST: db
-         DB_USER: user
-         DB_PASSWORD: password
-         DB_NAME: traceledger
-         REDIS_HOST: redis
-         RMQ_HOST: rabbit_mq
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RMQ_PASSWORD}
+      RABBITMQ_ERLANG_COOKIE: ${RMQ_COOKIE}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.4
+    environment:
+        - discovery.type=single-node
+        - xpack.security.enabled=false
+        - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+        - "9200:9200"
+    volumes:
+        - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+        test: ["CMD-SHELL", "curl -s http://localhost:9200 | grep -q 'cluster_name'"]
+        interval: 10s
+        timeout: 5s
+        retries: 10
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      REDIS_HOST: redis
+      RMQ_HOST: rabbitmq
+      ELASTIC_SEARCH_HOST: http://elasticsearch:9200
+
+volumes:
+  postgres_data:
+  es_data:

@@ -11,7 +11,7 @@ from app.services.auth_service import login_user, register_user
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from app.core.logger import logger
-from core.rate_limiter import RateLimiter
+from app.core.rate_limiter import RateLimiter
 from app.db.connection import get_db_conn
 from app.db.pool import pool
 from app.cache.redis_client import redis_client

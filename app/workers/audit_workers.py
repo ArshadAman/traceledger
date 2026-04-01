@@ -1,6 +1,6 @@
 from app.core.logger import logger
 import json
-from search.client import index_audit_event
+from app.search.client import index_audit_event
 from datetime import datetime
 from app.db.audit import INSERT_AUDIT_EVENT
 from app.db.connection import get_db_conn
