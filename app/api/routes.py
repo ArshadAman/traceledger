@@ -17,6 +17,7 @@ from app.db.pool import pool
 from app.cache.redis_client import redis_client
 from app.messaging.rabbitmq import get_rabbit_con
 from app.search.client import es
+import os
 
 # Initialize a router
 router = APIRouter()
